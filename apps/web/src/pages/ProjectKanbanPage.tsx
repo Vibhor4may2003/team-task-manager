@@ -2,13 +2,20 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.js";
 import { jsonFetch } from "../lib/api.js";
-import type { Task } from "../types/domain.js";
+import { getProject, listUsers, type DirectoryUser } from "../lib/projectsApi.js";
+import type { Project, Task } from "../types/domain.js";
 import { KanbanBoard } from "../components/kanban/KanbanBoard.js";
+
+type LoadedState = {
+  project: Project;
+  users: DirectoryUser[];
+  tasks: Task[];
+};
 
 export function ProjectKanbanPage() {
   const { projectId } = useParams();
   const { token } = useAuth();
-  const [tasks, setTasks] = useState<Task[] | null>(null);
+  const [state, setState] = useState<LoadedState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -19,14 +26,17 @@ export function ProjectKanbanPage() {
       setLoading(true);
       setError(null);
       try {
-        const data = await jsonFetch<{ tasks: Task[] }>(
-          `/api/projects/${projectId}/tasks`,
-          { token },
-        );
-        if (!cancelled) setTasks(data.tasks);
+        const [project, users, tasksRes] = await Promise.all([
+          getProject(projectId, token),
+          listUsers(token),
+          jsonFetch<{ tasks: Task[] }>(`/api/projects/${projectId}/tasks`, { token }),
+        ]);
+        if (!cancelled) {
+          setState({ project, users, tasks: tasksRes.tasks });
+        }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load tasks");
+          setError(err instanceof Error ? err.message : "Failed to load board");
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -42,7 +52,7 @@ export function ProjectKanbanPage() {
     return <p className="error-text">Missing project id.</p>;
   }
 
-  if (loading || tasks === null) {
+  if (loading || state === null) {
     return (
       <div className="page-loading" role="status">
         Loading board…
@@ -63,14 +73,22 @@ export function ProjectKanbanPage() {
     <div className="page kanban-page">
       <header className="page-header kanban-page-header">
         <div>
-          <h1>Kanban</h1>
-          <p className="muted small">Project {projectId}</p>
+          <h1>{state.project.name}</h1>
+          {state.project.description ? (
+            <p className="muted small" style={{ margin: 0 }}>
+              {state.project.description}
+            </p>
+          ) : null}
         </div>
         <Link className="btn ghost small" to="/projects">
           All projects
         </Link>
       </header>
-      <KanbanBoard projectId={projectId} initialTasks={tasks} />
+      <KanbanBoard
+        project={state.project}
+        users={state.users}
+        initialTasks={state.tasks}
+      />
     </div>
   );
 }

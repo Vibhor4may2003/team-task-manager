@@ -7,9 +7,17 @@ type Props = {
   status: TaskStatus;
   title: string;
   tasks: Task[];
+  resolveAssigneeLabel: (assigneeId: string | null) => string | null;
+  onOpenTask: (task: Task) => void;
 };
 
-export function KanbanColumn({ status, title, tasks }: Props) {
+export function KanbanColumn({
+  status,
+  title,
+  tasks,
+  resolveAssigneeLabel,
+  onOpenTask,
+}: Props) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
   const ids = tasks.map((t) => t.id);
 
@@ -22,7 +30,12 @@ export function KanbanColumn({ status, title, tasks }: Props) {
       <div ref={setNodeRef} className="kanban-column-body">
         <SortableContext items={ids} strategy={verticalListSortingStrategy}>
           {tasks.map((task) => (
-            <KanbanCard key={task.id} task={task} />
+            <KanbanCard
+              key={task.id}
+              task={task}
+              assigneeLabel={resolveAssigneeLabel(task.assigneeId)}
+              onOpen={onOpenTask}
+            />
           ))}
         </SortableContext>
       </div>

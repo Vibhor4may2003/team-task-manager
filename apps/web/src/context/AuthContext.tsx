@@ -22,6 +22,7 @@ type AuthContextValue = {
     email: string;
     password: string;
     fullName?: string;
+    adminCode?: string;
   }) => Promise<void>;
   logout: () => void;
 };
@@ -77,7 +78,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const signup = useCallback(
-    async (input: { email: string; password: string; fullName?: string }) => {
+    async (input: {
+      email: string;
+      password: string;
+      fullName?: string;
+      adminCode?: string;
+    }) => {
       const data = await jsonFetch<{ token: string; user: AuthUser }>(
         "/api/auth/signup",
         { method: "POST", body: input },

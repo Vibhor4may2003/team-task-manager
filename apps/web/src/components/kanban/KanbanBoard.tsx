@@ -7,40 +7,67 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../../context/AuthContext.js";
+import type { DirectoryUser } from "../../lib/projectsApi.js";
 import { patchTaskStatus } from "../../lib/tasksApi.js";
-import type { Task, TaskStatus } from "../../types/domain.js";
+import type { Project, Task, TaskStatus } from "../../types/domain.js";
 import {
   COLUMN_STATUSES,
   COLUMN_TITLES,
+  addTask,
   cloneColumns,
   findTaskLocation,
   groupTasksByStatus,
   isColumnId,
   moveTaskToStatus,
+  removeTask,
   replaceTask,
   type ColumnsState,
 } from "./kanbanModel.js";
 import { KanbanColumn } from "./KanbanColumn.js";
+import { TaskFormModal } from "./TaskFormModal.js";
 
 type Props = {
-  projectId: string;
+  project: Project;
+  users: DirectoryUser[];
   initialTasks: Task[];
 };
 
-export function KanbanBoard({ projectId, initialTasks }: Props) {
-  const { token } = useAuth();
+type EditingTask =
+  | { mode: "create" }
+  | { mode: "edit"; task: Task }
+  | null;
+
+export function KanbanBoard({ project, users, initialTasks }: Props) {
+  const { token, user } = useAuth();
   const [columns, setColumns] = useState<ColumnsState>(() =>
     groupTasksByStatus(initialTasks),
   );
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [editing, setEditing] = useState<EditingTask>(null);
   const columnsRef = useRef(columns);
   columnsRef.current = columns;
 
   useEffect(() => {
     setColumns(groupTasksByStatus(initialTasks));
   }, [initialTasks]);
+
+  const usersById = useMemo(() => {
+    const map = new Map<string, DirectoryUser>();
+    for (const u of users) map.set(u.id, u);
+    return map;
+  }, [users]);
+
+  const resolveAssigneeLabel = useCallback(
+    (assigneeId: string | null) => {
+      if (!assigneeId) return null;
+      const u = usersById.get(assigneeId);
+      if (!u) return "(unknown)";
+      return u.fullName || u.email;
+    },
+    [usersById],
+  );
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -104,7 +131,7 @@ export function KanbanBoard({ projectId, initialTasks }: Props) {
       void (async () => {
         try {
           const updated = await patchTaskStatus(activeId, targetStatus, token);
-          if (updated.projectId !== projectId) {
+          if (updated.projectId !== project.id) {
             setColumns(snapshot);
             setSyncError("Task project mismatch.");
             return;
@@ -116,11 +143,26 @@ export function KanbanBoard({ projectId, initialTasks }: Props) {
         }
       })();
     },
-    [projectId, token],
+    [project.id, token],
   );
 
   return (
     <div className="kanban-root">
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          marginBottom: "0.75rem",
+        }}
+      >
+        <button
+          type="button"
+          className="btn primary"
+          onClick={() => setEditing({ mode: "create" })}
+        >
+          + New task
+        </button>
+      </div>
       {syncError ? (
         <div className="banner error" role="alert">
           {syncError}
@@ -138,10 +180,37 @@ export function KanbanBoard({ projectId, initialTasks }: Props) {
               status={status}
               title={COLUMN_TITLES[status]}
               tasks={columns[status]}
+              resolveAssigneeLabel={resolveAssigneeLabel}
+              onOpenTask={(task) => setEditing({ mode: "edit", task })}
             />
           ))}
         </div>
       </DndContext>
+
+      {editing != null ? (
+        <TaskFormModal
+          mode={editing.mode}
+          project={project}
+          task={editing.mode === "edit" ? editing.task : null}
+          users={users}
+          token={token}
+          currentUserId={user?.id ?? null}
+          currentUserRole={user?.role ?? null}
+          onClose={() => setEditing(null)}
+          onCreated={(t) => {
+            setColumns((prev) => addTask(prev, t));
+            setEditing(null);
+          }}
+          onUpdated={(t) => {
+            setColumns((prev) => replaceTask(prev, t));
+            setEditing(null);
+          }}
+          onDeleted={(id) => {
+            setColumns((prev) => removeTask(prev, id));
+            setEditing(null);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

@@ -7,6 +7,7 @@ export function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [adminCode, setAdminCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -23,6 +24,7 @@ export function SignupPage() {
         email,
         password,
         fullName: fullName.trim() ? fullName.trim() : undefined,
+        adminCode: adminCode.trim() ? adminCode.trim() : undefined,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Signup failed");
@@ -68,6 +70,17 @@ export function SignupPage() {
               onChange={(e) => setPassword(e.target.value)}
               minLength={8}
               required
+            />
+          </label>
+          <label className="field">
+            <span>Admin code (optional)</span>
+            <input
+              name="adminCode"
+              type="text"
+              value={adminCode}
+              onChange={(e) => setAdminCode(e.target.value)}
+              placeholder="Leave empty if you're a regular member"
+              autoComplete="off"
             />
           </label>
           {error ? <p className="error-text">{error}</p> : null}

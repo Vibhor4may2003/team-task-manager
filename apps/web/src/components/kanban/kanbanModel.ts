@@ -86,3 +86,21 @@ export function replaceTask(cols: ColumnsState, updated: Task): ColumnsState {
   next[updated.status].push(updated);
   return next;
 }
+
+export function removeTask(cols: ColumnsState, taskId: string): ColumnsState {
+  const next = cloneColumns(cols);
+  for (const status of COLUMN_STATUSES) {
+    const idx = next[status].findIndex((t) => t.id === taskId);
+    if (idx !== -1) {
+      next[status].splice(idx, 1);
+      break;
+    }
+  }
+  return next;
+}
+
+export function addTask(cols: ColumnsState, task: Task): ColumnsState {
+  const next = cloneColumns(cols);
+  next[task.status] = [task, ...next[task.status]];
+  return next;
+}

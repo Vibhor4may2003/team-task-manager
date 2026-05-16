@@ -24,14 +24,27 @@ function publicUser(doc: {
   };
 }
 
+async function resolveSignupRole(adminCode: string | undefined): Promise<"Admin" | "Member"> {
+  const expectedCode = process.env.ADMIN_SIGNUP_CODE;
+  if (expectedCode && adminCode && adminCode === expectedCode) {
+    return "Admin";
+  }
+  const userCount = await UserModel.estimatedDocumentCount().exec();
+  if (userCount === 0) {
+    return "Admin";
+  }
+  return "Member";
+}
+
 export const signup = asyncHandler(async (req: Request, res: Response) => {
-  const { email, password, fullName } = req.body as SignupBody;
+  const { email, password, fullName, adminCode } = req.body as SignupBody;
+  const role = await resolveSignupRole(adminCode);
   const passwordHash = await bcrypt.hash(password, 10);
   const user = await UserModel.create({
     email,
     passwordHash,
     fullName,
-    role: "Member",
+    role,
   });
 
   const token = signAccessToken({

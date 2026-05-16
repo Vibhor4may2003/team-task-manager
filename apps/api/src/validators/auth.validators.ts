@@ -7,6 +7,7 @@ export const signupBodySchema = z.object({
     .min(8, "Password must be at least 8 characters")
     .max(128, "Password is too long"),
   fullName: z.string().trim().min(1).max(120).optional(),
+  adminCode: z.string().trim().min(1).max(200).optional(),
 });
 
 export const loginBodySchema = z.object({
