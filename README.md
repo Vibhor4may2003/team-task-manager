@@ -16,6 +16,20 @@ A full-stack **MERN** monorepo for collaborative projects: JWT authentication, r
 
 </div>
 
+## Quick start for evaluators
+
+**Live URL:** https://team-task-manager-production-89f5.up.railway.app
+
+To explore the app:
+
+1. Open the live URL and click **"Create an account"**.
+2. Fill in any email + password.
+3. To sign up as an **Admin** (full access — create projects, manage members, etc.), type `assessment-admin-2026` into the optional **"Admin code"** field on the signup form.
+4. To sign up as a **Member** (restricted access — work on projects an Admin invited you to), leave the **"Admin code"** field empty.
+5. After signup you'll land on the Dashboard. Use the **Projects** tab to create projects (Admin) or open boards (everyone). On a board, click **+ New task** to create tasks, drag cards across columns to change status, click a card to edit it.
+
+> **Health check:** `GET /health` returns `{"ok": true}`.
+
 ## Overview
 
 **Team Task Manager** is an assessment-style application that demonstrates a clean MERN stack on a `pnpm` workspace:
